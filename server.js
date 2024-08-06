@@ -43,6 +43,7 @@ io.on("connection", (socket) => {
 
   socket.on("drone_data", (data) => {
     console.log("Received drone data:", data);
+    socket.emit("drone_data_to_frontEnd", data);
   });
 
   socket.on("stop_drone_data", (data) => {

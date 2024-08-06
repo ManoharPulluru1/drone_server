@@ -5,10 +5,18 @@ const cors = require("cors");
 const app = express();
 const port = 3000;
 
-app.use(cors()); /*cross over region */
-app.use(express.json()); /*using middleware*/
+// Configure CORS
+app.use(cors({ origin: "http://127.0.0.1:5173", credentials: true })); /* Allow the specific origin */
+app.use(express.json()); /* Using middleware */
+
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server, {
+  cors: {
+    origin: "http://127.0.0.1:5173", // Update this with your client URL
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);

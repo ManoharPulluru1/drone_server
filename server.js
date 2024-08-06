@@ -2,23 +2,19 @@ const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
 const cors = require("cors");
-
 const app = express();
 const port = 3000;
 
-// Configure CORS to allow requests from specific origins
-app.use(cors({
-  origin: "*", // Replace "*" with the specific origin(s) you want to allow (e.g., "https://your-frontend-domain.com")
-  methods: ["GET", "POST"], // Specify which methods are allowed
-  allowedHeaders: ["Content-Type", "Authorization"] // Specify which headers are allowed
-}));
+// Configure CORS
+app.use(cors({ origin: "http://127.0.0.1:5173", credentials: true })); /* Allow the specific origin */
+app.use(express.json()); /* Using middleware */
 
-app.use(express.json()); /*using middleware*/
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "*", // Replace "*" with the specific origin(s) you want to allow
-    methods: ["GET", "POST"]
+    origin: "http://127.0.0.1:5173", // Update this with your client URL
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 

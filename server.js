@@ -6,11 +6,22 @@ const cors = require("cors");
 const app = express();
 const port = 3000;
 
-app.use(cors()); // Cross-origin resource sharing
+const corsOptions = {
+  origin: "http://127.0.0.1:5173", // Update this to the specific origin of your client
+  credentials: true,
+};
+
+app.use(cors(corsOptions)); // Use specific CORS options
 app.use(express.json()); // Middleware to parse JSON bodies
 
 const server = http.createServer(app);
-const io = socketIO(server, { cors: { origin: "*" } });
+const io = socketIO(server, {
+  cors: {
+    origin: "http://127.0.0.1:5173", // Update this to the specific origin of your client
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);

@@ -2,21 +2,15 @@ const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
 const cors = require("cors");
+
 const app = express();
 const port = 3000;
 
-// Configure CORS
-app.use(cors({ origin: "http://127.0.0.1:5173", credentials: true }));
-app.use(express.json());
+app.use(cors()); // Cross-origin resource sharing
+app.use(express.json()); // Middleware to parse JSON bodies
 
 const server = http.createServer(app);
-const io = socketIO(server, {
-  cors: {
-    origin: "http://127.0.0.1:5173",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+const io = socketIO(server, { cors: { origin: "*" } });
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
@@ -43,7 +37,6 @@ io.on("connection", (socket) => {
 
   socket.on("drone_data", (data) => {
     console.log("Received drone data:", data);
-    socket.emit("drone_data_to_frontEnd", data);
   });
 
   socket.on("stop_drone_data", (data) => {

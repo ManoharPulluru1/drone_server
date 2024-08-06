@@ -2,13 +2,25 @@ const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
 const cors = require("cors");
+
 const app = express();
 const port = 3000;
 
-app.use(cors()); /*cross over region */
+// Configure CORS to allow requests from specific origins
+app.use(cors({
+  origin: "*", // Replace "*" with the specific origin(s) you want to allow (e.g., "https://your-frontend-domain.com")
+  methods: ["GET", "POST"], // Specify which methods are allowed
+  allowedHeaders: ["Content-Type", "Authorization"] // Specify which headers are allowed
+}));
+
 app.use(express.json()); /*using middleware*/
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server, {
+  cors: {
+    origin: "*", // Replace "*" with the specific origin(s) you want to allow
+    methods: ["GET", "POST"]
+  }
+});
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);

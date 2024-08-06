@@ -6,13 +6,13 @@ const app = express();
 const port = 3000;
 
 // Configure CORS
-app.use(cors({ origin: "http://127.0.0.1:5173", credentials: true })); /* Allow the specific origin */
-app.use(express.json()); /* Using middleware */
+app.use(cors({ origin: "http://127.0.0.1:5173", credentials: true }));
+app.use(express.json());
 
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: "http://127.0.0.1:5173", // Update this with your client URL
+    origin: "http://127.0.0.1:5173",
     methods: ["GET", "POST"],
     credentials: true
   }

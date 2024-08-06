@@ -1,47 +1,59 @@
-const express = require('express');
-const http = require('http');
-const socketIO = require('socket.io');
+const express = require("express");
+const http = require("http");
+const socketIO = require("socket.io");
+const cors = require("cors");
 const app = express();
 const port = 3000;
 
-// Create an HTTP server and integrate Socket.IO
+app.use(cors()); /*cross over region */
+app.use(express.json()); /*using middleware*/
 const server = http.createServer(app);
 const io = socketIO(server);
 
-// Start the server
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-// Set up Socket.IO event listeners
-io.on('connection', (socket) => {
-  console.log('A client connected');
 
-  // Listen for 'user_connected' event
-  socket.on('user_connected', () => {
-    console.log('user_connected event received');
+io.on("connection", (socket) => {
+  console.log("A client connected");
+
+  socket.on("user_connected", (data) => {
+    console.log(`Drone ID: ${data.name} - ${data.status}`);
   });
 
-  // Listen for 'user_disconnected' event
-  socket.on('user_disconnected', () => {
-    console.log('user_disconnected event received');
+  socket.on("user_disconnected", () => {
+    console.log("user_disconnected event received");
   });
 
-  // Handle client disconnection
-  socket.on('disconnect', () => {
-    console.log('A client disconnected');
+  socket.on("disconnect", () => {
+    console.log("A client disconnected");
+  });
+
+  socket.on("drone_ready", (data) => {
+    console.log(`Drone ID: ${data.drone_id} - ${data.message}`);
+  });
+
+  socket.on("drone_data", (data) => {
+    console.log("Received drone data:", data);
+  });
+
+  socket.on("stop_drone_data", (data) => {
+    console.log(`Stop receiving data from Drone ID: ${data.drone_id}`);
   });
 });
 
-// POST /connect route
-app.post('/connect', (req, res) => {
-  console.log('Received POST request on /connect');
-  io.emit('user_connected'); // Emit 'user_connected' event
-  res.send('connected');
+app.post("/connect", (req, res) => {
+  const drones = req.body;
+  drones.forEach((drone) => {
+    io.emit("connect_to_drone", drone.droneId);
+  });
+  res.send("connected");
 });
 
-// POST /disconnect route
-app.post('/disconnect', (req, res) => {
-  console.log('Received POST request on /disconnect');
-  io.emit('user_disconnected'); // Emit 'user_disconnected' event
-  res.send('disconnected');
+app.post("/disconnect", (req, res) => {
+  const drones = req.body;
+  drones.forEach((drone) => {
+    io.emit("disconnect_from_drone", drone.droneId);
+  });
+  res.send("disconnected");
 });

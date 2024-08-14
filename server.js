@@ -1,72 +1,145 @@
 const express = require("express");
-const http = require("http");
-const socketIO = require("socket.io");
 const cors = require("cors");
+const http = require("http");
+const socketIo = require("socket.io");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 
 const app = express();
-const port = 3000;
-
-const corsOptions = {
-  origin: "http://127.0.0.1:5173", // Update this to the specific origin of your client
-  credentials: true,
-};
-
-app.use(cors(corsOptions)); // Use specific CORS options
-app.use(express.json()); // Middleware to parse JSON bodies
-
 const server = http.createServer(app);
-const io = socketIO(server, {
+const io = socketIo(server, {
   cors: {
-    origin: "http://127.0.0.1:5173", // Update this to the specific origin of your client
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true,
   },
 });
 
-server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+app.use(cors());
+app.use(express.json());
+
+let isDroneConnected = false;
+const upload = multer({ dest: "uploads/" });
 
 io.on("connection", (socket) => {
-  console.log("A client connected");
+  console.log("New client connected");
 
-  socket.on("user_connected", (data) => {
-    console.log(`Drone ID: ${data.name} - ${data.status}`);
+  socket.on("start_message", ({ data, id }) => {
+    console.log(id, "drone", data);
   });
 
-  socket.on("user_disconnected", () => {
-    console.log("user_disconnected event received");
+  socket.on("connect_to_drone", ({ id, status, state }) => {
+    console.log(state);
+    if (state) {
+      isDroneConnected = true;
+    }
+    console.log(`Drone ${id} connected with status: ${status}`);
+  });
+
+  socket.on("disconnect_to_drone", ({ id, status, state }) => {
+    console.log(state);
+    if (!state) {
+      isDroneConnected = false;
+    }
+    console.log(`Drone ${id} disconnected with status: ${status}`);
+  });
+
+  socket.on("yaw_data", ({ id, yaw }) => {
+    console.log(`Received yaw data from drone ${id}: ${yaw}`);
+  });
+
+  socket.on("position_data", ({ id, latitude, longitude }) => {
+    console.log(`Received position data from drone ${id}: Latitude: ${latitude}, Longitude: ${longitude}`);
+  });
+
+  socket.on("warning", ({ id, message }) => {
+    console.log(`Warning from drone ${id}: ${message}`);
   });
 
   socket.on("disconnect", () => {
-    console.log("A client disconnected");
+    console.log("Client disconnected");
   });
 
-  socket.on("drone_ready", (data) => {
-    console.log(`Drone ID: ${data.drone_id} - ${data.message}`);
+  // New event listeners for land and stable modes
+  socket.on("land", () => {
+    io.sockets.emit("land_command");
+    console.log("Land command sent to drone");
   });
 
-  socket.on("drone_data", (data) => {
-    console.log("Received drone data:", data);
-  });
-
-  socket.on("stop_drone_data", (data) => {
-    console.log(`Stop receiving data from Drone ID: ${data.drone_id}`);
+  socket.on("stable", () => {
+    io.sockets.emit("stable_command");
+    console.log("Stable command sent to drone");
   });
 });
 
 app.post("/connect", (req, res) => {
-  const drones = req.body;
-  drones.forEach((drone) => {
-    io.emit("connect_to_drone", drone.droneId);
-  });
-  res.send("connected");
+  const { id } = req.body;
+  if (isDroneConnected) {
+    console.log(`Drone ${id} is already connected`);
+    return res.status(400).send(`Drone ${id} is already connected`);
+  }
+  io.sockets.emit("connect_pixhawk", { id });
+  res.sendStatus(200);
 });
 
 app.post("/disconnect", (req, res) => {
-  const drones = req.body;
-  drones.forEach((drone) => {
-    io.emit("disconnect_from_drone", drone.droneId);
-  });
-  res.send("disconnected");
+  const { id } = req.body;
+  if (!isDroneConnected) {
+    console.log(`Drone ${id} is not connected`);
+    return res.status(400).send(`Drone ${id} is not connected`);
+  }
+  io.sockets.emit("disconnect_pixhawk", { id });
+  res.sendStatus(200);
+});
+
+app.get("/actionArm", (req, res) => {
+  io.sockets.emit("action_arm");
+  res.sendStatus(200);
+});
+
+app.get("/actionDisarm", (req, res) => {
+  io.sockets.emit("action_disarm");
+  res.sendStatus(200);
+});
+
+app.post("/thrust", (req, res) => {
+  const { thrust } = req.body;
+  io.sockets.emit("set_thrust", { thrust });
+  res.sendStatus(200);
+});
+
+app.get("/land", (req, res) => {
+  io.sockets.emit("land");
+  res.sendStatus(200);
+});
+
+app.get("/stable", (req, res) => {
+  io.sockets.emit("stable");
+  res.sendStatus(200);
+});
+
+app.post("/postmission", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send("No file uploaded");
+  }
+
+  const missionFilePath = path.resolve(req.file.path);
+
+  try {
+    const missionData = fs.readFileSync(missionFilePath, "utf8");
+
+    // Emit the mission data to the connected clients
+    io.sockets.emit("load_mission", { missionData });
+
+    console.log("Mission data sent to client");
+    res.status(200).send("Mission data sent successfully");
+  } catch (err) {
+    console.error("Error reading mission file:", err);
+    res.status(500).send("Failed to read mission file");
+  }
+});
+
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

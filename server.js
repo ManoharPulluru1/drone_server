@@ -108,6 +108,10 @@ app.post("/thrust", (req, res) => {
   res.sendStatus(200);
 });
 
+app.get("/",(req,res)=>{
+  res.send("Working Server")
+})
+
 app.get("/land", (req, res) => {
   io.sockets.emit("land");
   res.sendStatus(200);
